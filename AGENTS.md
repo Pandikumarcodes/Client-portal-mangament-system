@@ -9,8 +9,8 @@
 - Do not access MongoDB directly from routes.
 - Every tenant-owned query must eventually include `tenantId`.
 - Never commit secrets.
-- Do not access `process.env` throughout the application after centralized configuration is
-  introduced.
+- Access `process.env` only from `src/config/env.js`.
+- Add future environment variables incrementally with the feature that requires them.
 - Run validation before completion.
 - Summarize all changed files.
 - Stop after the requested prompt.
