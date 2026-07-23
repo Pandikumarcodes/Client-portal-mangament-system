@@ -1,6 +1,8 @@
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 
 const originalProcessEnvironment = { ...process.env };
+const safeMongoUri =
+  'mongodb+srv://placeholder-user:placeholder-password@cluster.example.mongodb.net/client_management_portal';
 
 let applicationEnvironment;
 let applicationName;
@@ -10,6 +12,7 @@ beforeAll(async () => {
     ...originalProcessEnvironment,
     NODE_ENV: 'development',
     PORT: '5000',
+    MONGO_URI: safeMongoUri,
   };
   vi.resetModules();
 
