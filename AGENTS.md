@@ -14,6 +14,9 @@
 - Add future environment variables incrementally with the feature that requires them.
 - Application code must never modify machine DNS configuration.
 - Do not introduce `dns.setServers()` without an explicit architecture decision.
+- Route Node.js DNS resolver overrides through `src/config/dns.js`.
+- Future database code must not call `dns.setServers()` directly.
+- Keep `DNS_SERVERS` environment-specific; never hardcode resolver addresses.
 - Run validation before completion.
 - Summarize all changed files.
 - Stop after the requested prompt.

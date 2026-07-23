@@ -13,6 +13,7 @@ beforeAll(async () => {
     NODE_ENV: 'development',
     PORT: '5000',
     MONGO_URI: safeMongoUri,
+    DNS_SERVERS: '',
   };
   vi.resetModules();
 

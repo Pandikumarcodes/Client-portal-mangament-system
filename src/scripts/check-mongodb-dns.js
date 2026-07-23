@@ -1,6 +1,7 @@
-import { getServers } from 'node:dns';
+import { getServers, setServers } from 'node:dns';
 import { resolveSrv } from 'node:dns/promises';
 
+import { configureDnsResolvers } from '../config/dns.js';
 import { checkMongoDns } from '../core/diagnostics/mongodb-dns-preflight.js';
 
 const SAFE_TOKEN_PATTERN = /^[a-z\d_-]+$/i;
@@ -21,6 +22,17 @@ const safeDnsServers = (value) =>
 const run = async () => {
   try {
     const { env } = await import('../config/env.js');
+    const resolverConfiguration = configureDnsResolvers({
+      dnsServers: env.dnsServers,
+      setServers,
+    });
+
+    if (resolverConfiguration.applied) {
+      console.log(`DNS resolver override applied: ${resolverConfiguration.servers.join(', ')}`);
+    } else {
+      console.log('DNS resolver override not configured.');
+    }
+
     const result = await checkMongoDns({
       mongoUri: env.mongoUri,
       getServers,

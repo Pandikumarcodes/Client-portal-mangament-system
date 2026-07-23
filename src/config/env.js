@@ -1,3 +1,5 @@
+import { isIP } from 'node:net';
+
 import dotenv from 'dotenv';
 import { z } from 'zod';
 
@@ -21,16 +23,31 @@ const isMongoSrvUri = (value) => {
   }
 };
 
+const dnsServersSchema = z
+  .string()
+  .optional()
+  .transform((value) => [
+    ...new Set(
+      (value ?? '')
+        .split(',')
+        .map((server) => server.trim())
+        .filter(Boolean),
+    ),
+  ])
+  .refine((servers) => servers.every((server) => isIP(server) !== 0));
+
 const environmentSchema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
   PORT: z.coerce.number().int().positive().max(65_535).default(5000),
   MONGO_URI: z.string().trim().min(1).refine(isMongoSrvUri),
+  DNS_SERVERS: dnsServersSchema,
 });
 
 const validation = environmentSchema.safeParse({
   NODE_ENV: process.env.NODE_ENV,
   PORT: process.env.PORT,
   MONGO_URI: process.env.MONGO_URI,
+  DNS_SERVERS: process.env.DNS_SERVERS,
 });
 
 if (!validation.success) {
@@ -47,4 +64,5 @@ export const env = Object.freeze({
   nodeEnv: validation.data.NODE_ENV,
   port: validation.data.PORT,
   mongoUri: validation.data.MONGO_URI,
+  dnsServers: Object.freeze([...validation.data.DNS_SERVERS]),
 });
