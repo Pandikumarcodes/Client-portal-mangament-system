@@ -19,6 +19,7 @@ beforeEach(() => {
   process.env = {
     ...originalProcessEnvironment,
     MONGO_URI: safeMongoUri,
+    CLIENT_URL: 'http://localhost:5173',
   };
   delete process.env.NODE_ENV;
   delete process.env.PORT;
@@ -64,6 +65,20 @@ describe('environment configuration', () => {
     const { env } = await importEnvironment();
 
     expect(env.mongoUri).toBe(safeMongoUri);
+  });
+
+  it('accepts and exports a valid CLIENT_URL', async () => {
+    const { env } = await importEnvironment();
+
+    expect(env.clientUrl).toBe('http://localhost:5173');
+  });
+
+  it('normalizes a trailing slash in CLIENT_URL', async () => {
+    process.env.CLIENT_URL = 'http://localhost:5173/';
+
+    const { env } = await importEnvironment();
+
+    expect(env.clientUrl).toBe('http://localhost:5173');
   });
 
   it('defaults a missing DNS_SERVERS value to an empty array', async () => {
@@ -168,6 +183,47 @@ describe('environment configuration', () => {
     await expect(importEnvironment()).rejects.toThrow(
       'Invalid environment configuration: invalid value for MONGO_URI.',
     );
+  });
+
+  it.each([
+    ['a missing value', undefined],
+    ['an empty value', ''],
+    ['a relative URL', '/dashboard'],
+    ['an FTP URL', 'ftp://example.com'],
+    ['an invalid URL', 'not a URL'],
+  ])('rejects CLIENT_URL with %s', async (_description, clientUrl) => {
+    if (clientUrl === undefined) {
+      delete process.env.CLIENT_URL;
+    } else {
+      process.env.CLIENT_URL = clientUrl;
+    }
+
+    await expect(importEnvironment()).rejects.toThrow(
+      'Invalid environment configuration: invalid value for CLIENT_URL.',
+    );
+  });
+
+  it('does not include MongoDB credentials in CLIENT_URL validation errors', async () => {
+    const sensitiveMongoUri =
+      'mongodb+srv://sensitive-user:sensitive-password@cluster.example.mongodb.net/database';
+    process.env.MONGO_URI = sensitiveMongoUri;
+    process.env.CLIENT_URL = 'javascript:alert(document.cookie)';
+
+    let thrownError;
+
+    try {
+      await importEnvironment();
+    } catch (error) {
+      thrownError = error;
+    }
+
+    expect(thrownError).toBeInstanceOf(Error);
+    expect(thrownError.message).toBe(
+      'Invalid environment configuration: invalid value for CLIENT_URL.',
+    );
+    expect(thrownError.message).not.toContain('sensitive-user');
+    expect(thrownError.message).not.toContain('sensitive-password');
+    expect(thrownError.message).not.toContain(sensitiveMongoUri);
   });
 
   it('does not include MongoDB credentials in configuration errors', async () => {

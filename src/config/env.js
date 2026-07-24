@@ -36,11 +36,27 @@ const dnsServersSchema = z
   ])
   .refine((servers) => servers.every((server) => isIP(server) !== 0));
 
+const clientUrlSchema = z
+  .string()
+  .trim()
+  .min(1)
+  .refine((value) => {
+    try {
+      const url = new URL(value);
+
+      return url.protocol === 'http:' || url.protocol === 'https:';
+    } catch {
+      return false;
+    }
+  })
+  .transform((value) => value.replace(/\/$/, ''));
+
 const environmentSchema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
   PORT: z.coerce.number().int().positive().max(65_535).default(5000),
   MONGO_URI: z.string().trim().min(1).refine(isMongoSrvUri),
   DNS_SERVERS: dnsServersSchema,
+  CLIENT_URL: clientUrlSchema,
 });
 
 const validation = environmentSchema.safeParse({
@@ -48,6 +64,7 @@ const validation = environmentSchema.safeParse({
   PORT: process.env.PORT,
   MONGO_URI: process.env.MONGO_URI,
   DNS_SERVERS: process.env.DNS_SERVERS,
+  CLIENT_URL: process.env.CLIENT_URL,
 });
 
 if (!validation.success) {
@@ -65,4 +82,5 @@ export const env = Object.freeze({
   port: validation.data.PORT,
   mongoUri: validation.data.MONGO_URI,
   dnsServers: Object.freeze([...validation.data.DNS_SERVERS]),
+  clientUrl: validation.data.CLIENT_URL,
 });

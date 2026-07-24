@@ -14,10 +14,11 @@ beforeAll(async () => {
     PORT: '5000',
     MONGO_URI: safeMongoUri,
     DNS_SERVERS: '',
+    CLIENT_URL: 'http://localhost:5173',
   };
   vi.resetModules();
 
-  ({ applicationEnvironment, applicationName } = await import('../src/index.js'));
+  ({ applicationEnvironment, applicationName } = await import('../src/config/application.js'));
 });
 
 afterAll(() => {

@@ -19,6 +19,10 @@
 - Domain modules must not call `mongoose.connect()` or `mongoose.disconnect()`.
 - Apply database DNS policy only through `src/config/dns.js`.
 - Establish the database connection before future HTTP startup.
+- `src/app.js` composes Express middleware and routes and must never call `listen()`.
+- `src/server.js` owns HTTP startup and shutdown and must connect MongoDB before listening.
+- `src/index.js` owns executable process startup and process signal handling.
+- Register future business routes through application composition in `src/app.js`.
 - Never include database credentials in logs or public errors.
 - Keep `DNS_SERVERS` environment-specific; never hardcode resolver addresses.
 - Run validation before completion.
