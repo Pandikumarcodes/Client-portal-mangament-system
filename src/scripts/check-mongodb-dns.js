@@ -1,5 +1,4 @@
-import { getServers, setServers } from 'node:dns';
-import { resolveSrv } from 'node:dns/promises';
+import { getServers, resolveSrv, setServers } from 'node:dns/promises';
 
 import { configureDnsResolvers } from '../config/dns.js';
 import { checkMongoDns } from '../core/diagnostics/mongodb-dns-preflight.js';
@@ -21,7 +20,11 @@ const safeDnsServers = (value) =>
 
 const run = async () => {
   try {
+    // Dynamic import allows environment validation errors to be handled
+    // by this script's catch block.
     const { env } = await import('../config/env.js');
+
+    // Apply the process-local DNS override before any DNS query begins.
     const resolverConfiguration = configureDnsResolvers({
       dnsServers: env.dnsServers,
       setServers,
@@ -33,6 +36,7 @@ const run = async () => {
       console.log('DNS resolver override not configured.');
     }
 
+    // These functions now use the DNS resolver policy applied above.
     const result = await checkMongoDns({
       mongoUri: env.mongoUri,
       getServers,
@@ -54,9 +58,11 @@ const run = async () => {
   } catch (error) {
     const configurationError =
       error instanceof Error && error.message.startsWith('Invalid environment configuration:');
+
     const category = configurationError
       ? 'invalid-environment-configuration'
       : (safeToken(error?.category) ?? 'dns-resolution-failed');
+
     const code = safeToken(error?.code);
     const syscall = safeToken(error?.syscall);
     const hostname = safeHostname(error?.hostname);
