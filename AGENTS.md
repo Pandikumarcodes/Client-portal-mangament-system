@@ -25,6 +25,12 @@
 - Register future business routes through application composition in `src/app.js`.
 - Routes must forward failures to centralized error middleware.
 - Wrap asynchronous route handlers with `asyncHandler` when they can reject.
+- Every input-accepting route must use a module-owned Zod schema with `validateRequest`.
+- Controllers must use `request.validated`, not raw `request.body`, `request.params`, or
+  `request.query`.
+- Forward validation failures to centralized error handling without exposing raw values or secrets.
+- Keep business schemas inside their owning modules.
+- Do not introduce global request-validation middleware.
 - Routes and future controllers must never expose raw dependency errors.
 - Add safe application error codes incrementally with the business module that needs them.
 - Keep global error middleware last in `src/app.js`.

@@ -105,7 +105,68 @@ paths, MongoDB details, credentials, cookies, or authorization headers. Developm
 weaken this response policy.
 
 Future asynchronous route handlers should use `asyncHandler` to forward failures without repeated
-try/catch blocks. Request-validation schemas and validation middleware remain unimplemented.
+try/catch blocks.
+
+## Request validation
+
+`validateRequest` is the reusable Zod boundary for route input. Validation is registered per route,
+never globally, and may compose body, route-parameter, and query schemas into one operation:
+
+```js
+router.post(
+  '/resource/:resourceId',
+  validateRequest({
+    body: resourceBodySchema,
+    params: resourceParamsSchema,
+    query: resourceQuerySchema,
+  }),
+  asyncHandler(resourceController),
+);
+```
+
+Successful parsing places only the validated sections and their transformed Zod output in a frozen
+top-level object:
+
+```js
+request.validated = {
+  body: {},
+  params: {},
+  query: {},
+};
+```
+
+Future controllers must use `request.validated` rather than trusting `request.body`,
+`request.params`, or `request.query`. The raw Express values are not mutated.
+
+Validation failures flow through centralized error handling:
+
+```json
+{
+  "success": false,
+  "error": {
+    "code": "VALIDATION_ERROR",
+    "message": "The request is invalid.",
+    "details": [
+      {
+        "field": "body.email",
+        "code": "INVALID_FORMAT",
+        "message": "Invalid email address."
+      }
+    ]
+  }
+}
+```
+
+Details contain at most 20 application-controlled issues and never contain submitted values,
+passwords, tokens, complete request bodies, Zod internals, or credentials. Async Zod refinements are
+supported. Unexpected schema execution failures remain internal and receive the generic HTTP 500
+response.
+
+Business schemas are not implemented yet. Future schemas belong inside their owning modules.
+Header, cookie, file, and response validation are also deferred.
+
+The current HTTP flow is foundational middleware, route-specific validation where configured,
+route handlers, centralized not-found handling, and the final global error middleware.
 
 ## Database connection lifecycle
 
@@ -171,6 +232,6 @@ diagnostics, the Mongoose connection lifecycle, Express application composition,
 health endpoint, graceful HTTP process lifecycle, and centralized safe HTTP error handling.
 
 This increment intentionally contains no authentication, schemas, models, repositories, or
-business modules. Request validation, request logging, request correlation, and business routes are
-also deferred. Never commit `.env`; it can contain database credentials and other
-environment-specific configuration.
+business modules. Reusable request-validation infrastructure exists, but business schemas, request
+logging, request correlation, and business routes remain deferred. Never commit `.env`; it can
+contain database credentials and other environment-specific configuration.
