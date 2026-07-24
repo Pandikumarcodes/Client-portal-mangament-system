@@ -7,6 +7,7 @@
     "dev": "nodemon src/index.js",
     "start": "node src/index.js",
     "db:dns-check": "node src/scripts/check-mongodb-dns.js",
+    "db:check": "node src/scripts/check-database.js",
     "check:syntax": "node --check src/index.js",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",

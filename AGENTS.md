@@ -16,6 +16,10 @@
 - Do not introduce `dns.setServers()` without an explicit architecture decision.
 - Route Node.js DNS resolver overrides through `src/config/dns.js`.
 - Future database code must not call `dns.setServers()` directly.
+- Domain modules must not call `mongoose.connect()` or `mongoose.disconnect()`.
+- Apply database DNS policy only through `src/config/dns.js`.
+- Establish the database connection before future HTTP startup.
+- Never include database credentials in logs or public errors.
 - Keep `DNS_SERVERS` environment-specific; never hardcode resolver addresses.
 - Run validation before completion.
 - Summarize all changed files.

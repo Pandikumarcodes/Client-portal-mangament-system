@@ -46,12 +46,28 @@ npm.cmd test
 npm.cmd run validate
 ```
 
-## MongoDB DNS preflight
+## Database connection lifecycle
+
+The explicit database lifecycle is centralized in `src/config/database.js`. It applies the
+environment-configured DNS resolver policy, deduplicates concurrent startup attempts, connects the
+single Mongoose default connection, exposes side-effect-free readiness inspection, and disconnects
+cleanly. Connection and disconnection errors use fixed safe messages while retaining their original
+causes for controlled diagnostics.
+
+Importing the module does not connect to MongoDB. A future executable process layer will call the
+lifecycle before starting HTTP traffic and during graceful shutdown. Express initialization and
+HTTP server startup remain unimplemented.
+
+Domain modules must not call `mongoose.connect()` or `mongoose.disconnect()` or create independent
+connections.
+
+## MongoDB diagnostics
 
 After setting a real developer-owned `MONGO_URI`, run:
 
 ```powershell
 npm.cmd run db:dns-check
+npm.cmd run db:check
 ```
 
 `DNS_SERVERS` is optional and should remain empty wherever the default resolver works. If the
@@ -65,7 +81,7 @@ The override changes resolver behavior only for the current Node.js process. It 
 Windows DNS settings, network-adapter configuration, or resolver behavior for other applications.
 The configured policy is applied before the DNS preflight performs SRV discovery.
 
-The command checks which DNS resolvers Node.js sees and whether they can resolve the Atlas
+The `db:dns-check` command checks which DNS resolvers Node.js sees and whether they can resolve the Atlas
 `_mongodb._tcp` SRV record. It reports the cluster hostname, configured resolvers, record count,
 resolved targets, and categorized DNS failures without printing the URI or credentials. It also
 warns when only loopback resolvers are configured.
@@ -74,9 +90,22 @@ The preflight does not connect to MongoDB, test credentials, verify the Atlas IP
 confirm database availability. A successful result proves DNS SRV discovery only; it does not prove
 authentication or Atlas network access.
 
+The `db:check` command applies the same DNS policy and attempts an actual Mongoose connection. It
+therefore verifies DNS discovery, credentials, Atlas network access, server selection, and database
+connectivity. It reports only a safe cause type, cause code when available, and diagnostic category
+on failure. It never prints the raw dependency error.
+
+Run the commands in order when troubleshooting:
+
+1. Run `npm.cmd run db:dns-check`. Resolve any categorized DNS issue before continuing.
+2. Run `npm.cmd run db:check`. Use its diagnostic category to distinguish DNS, authentication, and
+   server-selection failures.
+3. Check the local `DNS_SERVERS` value and Atlas network access list as appropriate without sharing
+   `.env`, the MongoDB URI, credentials, raw errors, or stack traces.
+
 ## Current status
 
-The project contains the backend foundation and centralized environment validation. Express is
-installed but no Express application or HTTP server startup is implemented. MongoDB Atlas URI
-validation and DNS diagnostics are implemented, but no Mongoose connection or database lifecycle
-exists yet.
+The project contains the backend foundation, centralized environment validation, DNS diagnostics,
+and an explicit Mongoose connection lifecycle. Express is installed, but no Express application or
+HTTP server startup is implemented. Authentication, schemas, models, repositories, and business
+modules are also not implemented.

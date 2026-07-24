@@ -1,5 +1,5 @@
-import { getServers, resolveSrv, setServers } from 'node:dns/promises';
-
+// import { getServers, resolveSrv, setServers } from 'node:dns/promises';
+import * as dns from 'node:dns';
 import { configureDnsResolvers } from '../config/dns.js';
 import { checkMongoDns } from '../core/diagnostics/mongodb-dns-preflight.js';
 
@@ -27,7 +27,7 @@ const run = async () => {
     // Apply the process-local DNS override before any DNS query begins.
     const resolverConfiguration = configureDnsResolvers({
       dnsServers: env.dnsServers,
-      setServers,
+      setServers: (servers) => dns.setServers(servers),
     });
 
     if (resolverConfiguration.applied) {
@@ -39,8 +39,8 @@ const run = async () => {
     // These functions now use the DNS resolver policy applied above.
     const result = await checkMongoDns({
       mongoUri: env.mongoUri,
-      getServers,
-      resolveSrv,
+      getServers: () => dns.getServers(),
+      resolveSrv: (hostname) => dns.promises.resolveSrv(hostname),
     });
 
     console.log('MongoDB DNS preflight passed');
