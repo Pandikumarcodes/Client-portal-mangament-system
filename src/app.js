@@ -6,6 +6,8 @@ import helmet from 'helmet';
 
 import { env } from './config/env.js';
 import healthRouter from './core/health/health.routes.js';
+import { errorHandler } from './middlewares/error-handler.js';
+import { notFoundHandler } from './middlewares/not-found.js';
 
 export function createApp() {
   const app = express();
@@ -25,6 +27,8 @@ export function createApp() {
   app.use(express.urlencoded({ extended: true, limit: '1mb' }));
   app.use(cookieParser());
   app.use('/api/v1/health', healthRouter);
+  app.use(notFoundHandler);
+  app.use(errorHandler);
 
   return app;
 }

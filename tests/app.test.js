@@ -110,6 +110,63 @@ describe('createApp', () => {
   it('rejects JSON request bodies larger than 1mb', async () => {
     const oversizedBody = { value: 'a'.repeat(1024 * 1024) };
 
-    await request(createApp()).post('/api/v1/health').send(oversizedBody).expect(413);
+    const response = await request(createApp())
+      .post('/api/v1/health')
+      .send(oversizedBody)
+      .expect('Content-Type', /application\/json/)
+      .expect(413);
+
+    expect(response.body).toEqual({
+      success: false,
+      error: {
+        code: 'PAYLOAD_TOO_LARGE',
+        message: 'The request body exceeds the allowed size.',
+      },
+    });
   });
+
+  it('returns the standardized safe JSON response for an unknown route', async () => {
+    const requestedUrl = '/missing/private-resource?token=query-secret';
+
+    const response = await request(createApp())
+      .get(requestedUrl)
+      .expect('Content-Type', /application\/json/)
+      .expect(404);
+
+    expect(response.body).toEqual({
+      success: false,
+      error: {
+        code: 'RESOURCE_NOT_FOUND',
+        message: 'The requested resource was not found.',
+      },
+    });
+    expect(JSON.stringify(response.body)).not.toContain(requestedUrl);
+    expect(JSON.stringify(response.body)).not.toContain('query-secret');
+  });
+
+  it('returns INVALID_JSON for malformed JSON without a production test route', async () => {
+    const response = await request(createApp())
+      .post('/api/v1/health')
+      .set('Content-Type', 'application/json')
+      .send('{"invalidJson":')
+      .expect('Content-Type', /application\/json/)
+      .expect(400);
+
+    expect(response.body).toEqual({
+      success: false,
+      error: {
+        code: 'INVALID_JSON',
+        message: 'The request body contains invalid JSON.',
+      },
+    });
+  });
+
+  it.each(['/throw-error', '/test-error', '/debug', '/crash'])(
+    'does not expose a production debug route at %s',
+    async (path) => {
+      const response = await request(createApp()).get(path).expect(404);
+
+      expect(response.body.error.code).toBe('RESOURCE_NOT_FOUND');
+    },
+  );
 });

@@ -67,7 +67,8 @@ no database query and exposes no connection details.
 
 `src/app.js` constructs a new Express application without opening a network port. Its foundational
 middleware order is X-Powered-By removal, Helmet, CORS, compression, JSON parsing, URL-encoded
-parsing, cookie parsing, and infrastructure routes.
+parsing, cookie parsing, infrastructure and future application routes, centralized not-found
+handling, and global error handling. The global error middleware remains last.
 
 `src/server.js` owns the HTTP and database lifecycle. Startup connects MongoDB, constructs Express,
 creates a Node HTTP server, and only resolves after the listener is accepting traffic. Concurrent
@@ -78,6 +79,33 @@ can be started again.
 `src/index.js` is the executable process boundary. It starts the server, registers one-time SIGINT
 and SIGTERM handlers, and applies safe exit-code and console-message policy. Pressing Ctrl+C sends
 SIGINT and initiates graceful shutdown without calling `process.exit()`.
+
+## HTTP error responses
+
+Handled HTTP failures use one JSON envelope:
+
+```json
+{
+  "success": false,
+  "error": {
+    "code": "RESOURCE_NOT_FOUND",
+    "message": "The requested resource was not found."
+  }
+}
+```
+
+Unknown routes return this response with HTTP 404. Malformed JSON bodies return HTTP 400 with
+`INVALID_JSON`, and request bodies exceeding the configured 1 MB limit return HTTP 413 with
+`PAYLOAD_TOO_LARGE`.
+
+Expected client-facing errors use `ApiError`. Optional `details` appear only when safe information
+was explicitly supplied. Unknown failures return HTTP 500 with `INTERNAL_SERVER_ERROR` and a generic
+message. HTTP responses never include internal error messages, causes, stack traces, filesystem
+paths, MongoDB details, credentials, cookies, or authorization headers. Development mode does not
+weaken this response policy.
+
+Future asynchronous route handlers should use `asyncHandler` to forward failures without repeated
+try/catch blocks. Request-validation schemas and validation middleware remain unimplemented.
 
 ## Database connection lifecycle
 
@@ -140,9 +168,9 @@ Run the commands in order when troubleshooting:
 
 The project currently implements the backend foundation, centralized environment validation, DNS
 diagnostics, the Mongoose connection lifecycle, Express application composition, one operational
-health endpoint, and graceful HTTP process lifecycle.
+health endpoint, graceful HTTP process lifecycle, and centralized safe HTTP error handling.
 
 This increment intentionally contains no authentication, schemas, models, repositories, or
-business modules. Global API error handling, request logging, request correlation, and business
-routes are also deferred. Never commit `.env`; it can contain database credentials and other
+business modules. Request validation, request logging, request correlation, and business routes are
+also deferred. Never commit `.env`; it can contain database credentials and other
 environment-specific configuration.

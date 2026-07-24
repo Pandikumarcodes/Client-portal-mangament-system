@@ -23,6 +23,12 @@
 - `src/server.js` owns HTTP startup and shutdown and must connect MongoDB before listening.
 - `src/index.js` owns executable process startup and process signal handling.
 - Register future business routes through application composition in `src/app.js`.
+- Routes must forward failures to centralized error middleware.
+- Wrap asynchronous route handlers with `asyncHandler` when they can reject.
+- Routes and future controllers must never expose raw dependency errors.
+- Add safe application error codes incrementally with the business module that needs them.
+- Keep global error middleware last in `src/app.js`.
+- Never send secrets, stacks, causes, or infrastructure errors to HTTP clients.
 - Never include database credentials in logs or public errors.
 - Keep `DNS_SERVERS` environment-specific; never hardcode resolver addresses.
 - Run validation before completion.
